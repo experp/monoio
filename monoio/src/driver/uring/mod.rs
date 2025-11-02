@@ -97,6 +97,18 @@ impl IoUringDriver {
         Self::new_with_entries(b, Self::DEFAULT_ENTRIES)
     }
 
+    /// EXPOSED: get a shared reference to the underlying io_uring.
+    ///
+    /// SAFETY NOTES:
+    /// - We only give &IoUring, not &mut, so normal monoio use stays safe.
+    /// - Caller must not call methods that break monoio’s scheduling assumptions
+    ///   (eg. stealing cqes or rewriting user_data in-flight).
+    pub fn raw_uring(&self) -> &io_uring::IoUring {
+        // IoUringDriver holds `Rc<UnsafeCell<UringInner>>`
+        // UringInner holds `ManuallyDrop<IoUring>`
+        unsafe { &(*self.inner.get()).uring }
+    }
+
     #[cfg(not(feature = "sync"))]
     pub(crate) fn new_with_entries(
         urb: &io_uring::Builder,
